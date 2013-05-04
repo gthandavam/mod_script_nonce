@@ -49,7 +49,9 @@ static int example_handler(request_rec *r)
     // for each request
     if (!r->handler || strcmp(r->handler, "example-handler")) return (DECLINED);
 
-    apr_table_add(r->headers_out, "TEST", "jimmy");
+    apr_table_add(r->headers_out, "Content-Security-Policy", "script-nonce 1234;");
+
+    //apr_table_add(r->headers_out, "X-Webkit-CSP", "script-nonce 1234;");
 
     fp = fopen(r->filename,"r"); 
 
@@ -92,7 +94,6 @@ static int example_handler(request_rec *r)
     }
  
 
- //
  //   // The first thing we will do is write a simple "Hello, world!" back to the client.
 //    ap_rputs("<html> Hello, world! 23234<br/> </html>", r);
     return OK;
