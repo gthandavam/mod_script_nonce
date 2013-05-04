@@ -1,1 +1,29 @@
 Lalit, Ameya and GT
+
+Instructions:
+Install Chrome Dev build. Stable installations of chrome do not support script-nonce yet.
+
+How to install Chrome Dev build ? 
+On Ubuntu: 
+#If google chrome is already installed
+sudo apt-purge google-chrome-stable
+sudo apt-get install google-chrome-unstable
+
+
+I tested this on Chrome 28.0.1496.0 (Official Build 197749) dev
+
+How to see script-nonce in action ?
+in sample.html file, uncomment the meta directive in the head section of the page to cross-check if the browser supports script-nonce.
+
+meta -> an alternative way to send HTTP headers in a web-page.
+
+Now, in our sample module, we are adding the same HTTP header.(read mod_example1.c)
+Benefit of adding the HTTP header in apache:
+The web-developer need not worry about enforcing the script-nonce.
+The web-admin gets to decide the policy for the pages served from an apache installation. This is a huge win. 
+
+This will take care of stored XSS attacks.
+
+
+
+
