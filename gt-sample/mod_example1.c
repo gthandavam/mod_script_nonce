@@ -5,6 +5,7 @@
 #include "http_protocol.h"
 #include "http_request.h"
 #include "apr_general.h"
+#include "apr_strings.h"
 #include "apr_errno.h"
 
 #define LENGTH_OF_RANDOM_VALUE_STRING 256
@@ -34,13 +35,18 @@ static void register_hooks(apr_pool_t *pool)
     ap_hook_handler(example_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
-void getRandomByteString(char buffer[LENGTH_OF_RANDOM_VALUE_STRING], int size)
+void get_random_byte_string(char *buffer, int size)
 {
     int i;
-    if( apr_generate_random_bytes(buffer, size) == APR_SUCCESS )
-        for(i=0;i<LENGTH_OF_RANDOM_VALUE_STRING;i++)
-            if(0x80 & buffer[i])
-                buffer[i] = 0xff ^ buffer[i];
+//    if( apr_generate_random_bytes(buffer, size) == APR_SUCCESS )
+//        for(i=0; i < (size - 1);i++)
+//            if(0x80 & buffer[i])
+//                buffer[i] = 0xff ^ buffer[i];
+
+    for(i=0; i< (size - 1);i++)
+	buffer[i] = 'y';
+
+    buffer[size-1] = '\0';
 }
 /* The handler function for our module.
  * This is where all the fun happens!
@@ -51,23 +57,20 @@ static int example_handler(request_rec *r)
     int i = -1;
     char *sub = NULL;
 
-    char buffer[LENGTH_OF_RANDOM_VALUE_STRING];
     int size = LENGTH_OF_RANDOM_VALUE_STRING / LENGTH_OF_BYTE;
+    size = size + 1; // for null character
+    char random_buffer[size];
 
     ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
-        "Inside example_handler: %s, %s, %s", r->filename, r->handler, buffer);
+        "Inside example_handler: %s, %s", r->filename, r->handler);
 
-    getRandomByteString(buffer, size);
-
-    // Checking buffer from log as of now.
-    ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
-        "Inside example_handler: %s, %s, %s", r->filename, r->handler, buffer);
 
     // Is this redundant ? -> No - Log messages indicate that handler gets called
     // for each request
     if (!r->handler || strcmp(r->handler, "example_handler")) return (DECLINED);
 
-    apr_table_add(r->headers_out, "X-Content-Security-Policy", "script-nonce xxxxxx\'");
+    ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
+        "Inside example_handler: %s, %s", r->filename, r->handler);
 
     fp = fopen(r->filename,"r");
 
@@ -84,32 +87,46 @@ static int example_handler(request_rec *r)
         }
     }
 
-    char buf[1024];
-    size_t len;
-    while (1) {
-        len = fread(buf, 1, 1024, fp);
-        if (len <= 0) {
-            break;
-        }
+    get_random_byte_string(random_buffer, size);
 
-    do {
-        sub = strstr(buf, "dummy");
+    ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
+        "random_buffer: %s", random_buffer);
 
-        if(sub) {
-        //replacing jimmy with dummy
-            i = sub - buf;
-            buf[i] = 'j';
-            buf[i+1] = 'i';
-        }
-        //We need to handle the case when jimmy is spread
-                //across 1024 buffer boundary
-    //keeping it simple for now as this is just POC
-    } while(sub);
+    ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r, "header value : %s", 
+           apr_pstrcat(r->pool, "script-nonce ", random_buffer,"; ", NULL));
 
-    ap_rwrite(buf, len, r);
-    }
+    { //search and replace block
+    	char buf[1024];
+    	size_t len;
 
- //   // The first thing we will do is write a simple "Hello, world!" back to the client.
-//    ap_rputs("<html> Hello, world! 23234<br/> </html>", r);
+    	while (1) {
+    		len = fread(buf, 1, 1024, fp);
+    	    	if (len <= 0) {
+    	        	break;
+    	    	}
+
+    		do {
+    		    sub = strstr(buf, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+
+		    if(sub) {
+			i = sub - buf;
+		    	for(int j=0; j < 32; j++, i++) {
+    		    	//replacing jimmy with dummy
+    		    	    buf[i] = random_buffer[j];
+    		    	}
+	            }
+    		    //We need to handle the case when jimmy is spread
+    		            //across 1024 buffer boundary
+    		//keeping it simple for now as this is just POC
+    		} while(sub);
+
+    		ap_rwrite(buf, len, r);
+    	}
+
+    } //end of search and replace block
+
+    apr_table_add(r->headers_out, "Content-Security-Policy", 
+             apr_pstrcat(r->pool, "script-nonce ", random_buffer,"; ", NULL));
+
     return OK;
 }
