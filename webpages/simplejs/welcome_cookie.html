@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script>
+<script script-nonce="xxxxxx">
 function getCookie(c_name)
 {
 var c_value = document.cookie;
@@ -28,7 +28,7 @@ return c_value;
 }
 </script>
 
-<script>
+<script script-nonce="xxxxxx">
 function setCookie(c_name,value,exdays)
 {
 var exdate=new Date();
@@ -38,7 +38,7 @@ document.cookie=c_name + "=" + c_value;
 }
 </script>
 
-<script>
+<script script-nonce="xxxxxx">
 function checkCookie()
 {
 var username=getCookie("username");
@@ -46,7 +46,7 @@ if (username!=null && username!="")
   {
   alert("Welcome again " + username);
   }
-else 
+else
   {
   username=prompt("Please enter your name:","");
   if (username!=null && username!="")
