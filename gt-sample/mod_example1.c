@@ -4,15 +4,17 @@
 #include "http_log.h"
 #include "http_protocol.h"
 #include "http_request.h"
+#include "apr_general.h"
+#include "apr_errno.h"
+
+#define RANDOM_VALUE_LENGTH 256
+#define RANDOM_VALUE_NUM_OF_BYTES RANDOM_VALUE_LENGTH/8
 
 /* Define prototypes of our functions in this module */
 static void register_hooks(apr_pool_t *pool);
 static int example_handler(request_rec *r);
 
 /* Define our module as an entity and assign a function for registering hooks  */
-
-
-
 module AP_MODULE_DECLARE_DATA   example_module =
 {
     STANDARD20_MODULE_STUFF,
@@ -26,32 +28,48 @@ module AP_MODULE_DECLARE_DATA   example_module =
 
 
 /* register_hooks: Adds a hook to the httpd process */
-static void register_hooks(apr_pool_t *pool) 
+static void register_hooks(apr_pool_t *pool)
 {
-    
     /* Hook the request handler */
     ap_hook_handler(example_handler, NULL, NULL, APR_HOOK_LAST);
 }
 
+void getRandomByteString(char buffer[RANDOM_VALUE_LENGTH])
+{
+    int i;
+    if( apr_generate_random_bytes(buffer, RANDOM_VALUE_NUM_OF_BYTES) == APR_SUCCESS )
+        for(i=0;i<RANDOM_VALUE_LENGTH;i++)
+            if(0x80 & buffer[i])
+                buffer[i] = 0xff ^ buffer[i];
+}
 /* The handler function for our module.
  * This is where all the fun happens!
  */
-
 static int example_handler(request_rec *r)
 {
-    FILE *fp = NULL; 
+    FILE *fp = NULL;
     int i = -1;
     char *sub = NULL;
+
+    char buffer[RANDOM_VALUE_LENGTH];
+    int size = RANDOM_VALUE_NUM_OF_BYTES;
+
     ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
-                  "Inside example_handler: %s, %s", r->filename, r->handler);
+        "Inside example_handler: %s, %s, %s", r->filename, r->handler, buffer);
 
-    // Is this redundant ? -> No - Log messages indicate that handler gets called 
+    getRandomByteString(buffer);
+
+    // Checking buffer from log as of now.
+    ap_log_rerror(APLOG_MARK, APLOG_CRIT, 0, r,
+        "Inside example_handler: %s, %s, %s", r->filename, r->handler, buffer);
+
+    // Is this redundant ? -> No - Log messages indicate that handler gets called
     // for each request
-    if (!r->handler || strcmp(r->handler, "example-handler")) return (DECLINED);
+    if (!r->handler || strcmp(r->handler, "example_handler")) return (DECLINED);
 
-    apr_table_add(r->headers_out, "TEST", "jimmy");
+    apr_table_add(r->headers_out, "X-Content-Security-Policy", "script-nonce xxxxxx\'");
 
-    fp = fopen(r->filename,"r"); 
+    fp = fopen(r->filename,"r");
 
     if (fp == NULL) {
         switch (errno) {
@@ -74,25 +92,23 @@ static int example_handler(request_rec *r)
             break;
         }
 
-	do {
-		sub = strstr(buf, "dummy");
+    do {
+        sub = strstr(buf, "dummy");
 
-		if(sub) {
-		//replacing jimmy with dummy
-			i = sub - buf;
-			buf[i] = 'j';
-                	buf[i+1] = 'i';
-	  	}
-		//We need to handle the case when jimmy is spread
+        if(sub) {
+        //replacing jimmy with dummy
+            i = sub - buf;
+            buf[i] = 'j';
+            buf[i+1] = 'i';
+        }
+        //We need to handle the case when jimmy is spread
                 //across 1024 buffer boundary
-		//keeping it simple for now as this is just POC
-	} while(sub);
+    //keeping it simple for now as this is just POC
+    } while(sub);
 
-        ap_rwrite(buf, len, r);
+    ap_rwrite(buf, len, r);
     }
- 
 
- //
  //   // The first thing we will do is write a simple "Hello, world!" back to the client.
 //    ap_rputs("<html> Hello, world! 23234<br/> </html>", r);
     return OK;
