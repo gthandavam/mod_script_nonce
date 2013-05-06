@@ -25,5 +25,10 @@ The web-admin gets to decide the policy for the pages served from an apache inst
 This will take care of stored XSS attacks.
 
 
+Approach:
+mod_example1 will generate a nonce and set the HTTP header.
+and set the notes nonce-s, with value of the form s|pattern|nonce|ni
 
+This nonce-s will be used by the tweaked mod_substitute to substitute all the
+occurrences of the pattern in the response.
 
