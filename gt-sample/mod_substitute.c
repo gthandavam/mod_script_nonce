@@ -33,6 +33,9 @@
 #define APR_WANT_STRFUNC
 #include "apr_want.h"
 
+/* 32 bytes plus 1 for \0*/
+#define NONCE_BYTES 33
+
 static const char substitute_filter_name[] = "SUBSTITUTE";
 
 module AP_MODULE_DECLARE_DATA substitute_module;
@@ -48,6 +51,7 @@ typedef struct subst_pattern_t {
 
 typedef struct {
     apr_array_header_t *patterns;
+    char *nonce;
 } subst_dir_conf;
 
 typedef struct {
@@ -58,26 +62,45 @@ typedef struct {
     apr_pool_t *tpool;
 } substitute_module_ctx;
 
+static void get_random_byte_string(char *buffer, int size)
+{
+    int i;
+//TODO csp nonce should be alphanumeric
+
+//    if( apr_generate_random_bytes(buffer, size) == APR_SUCCESS )
+//        for(i=0; i < (size - 1);i++)
+//            if(0x80 & buffer[i])
+//                buffer[i] = 0xff ^ buffer[i];
+
+    for(i=0; i< (size - 1);i++)
+	buffer[i] = 'y';
+    buffer[size-1] = '\0';
+}
+
 static void *create_substitute_dcfg(apr_pool_t *p, char *d)
 {
     subst_dir_conf *dcfg =
     (subst_dir_conf *) apr_pcalloc(p, sizeof(subst_dir_conf));
+    dcfg->nonce = (char *) apr_pcalloc(p, NONCE_BYTES);
+
+    get_random_byte_string(dcfg->nonce, NONCE_BYTES);
 
     dcfg->patterns = apr_array_make(p, 10, sizeof(subst_pattern_t));
+
     return dcfg;
 }
 
-//static void *merge_substitute_dcfg(apr_pool_t *p, void *basev, void *overv)
-//{
-//    subst_dir_conf *a =
-//    (subst_dir_conf *) apr_pcalloc(p, sizeof(subst_dir_conf));
-//    subst_dir_conf *base = (subst_dir_conf *) basev;
-//    subst_dir_conf *over = (subst_dir_conf *) overv;
-//
-//    a->patterns = apr_array_append(p, over->patterns,
-//                                                  base->patterns);
-//    return a;
-//}
+static void *merge_substitute_dcfg(apr_pool_t *p, void *basev, void *overv)
+{
+    subst_dir_conf *a =
+    (subst_dir_conf *) apr_pcalloc(p, sizeof(subst_dir_conf));
+    subst_dir_conf *base = (subst_dir_conf *) basev;
+    subst_dir_conf *over = (subst_dir_conf *) overv;
+
+    a->patterns = apr_array_append(p, over->patterns,
+                                                  base->patterns);
+    return a;
+}
 
 #define AP_MAX_BUCKETS 1000
 /*
@@ -309,6 +332,8 @@ static apr_status_t substitute_filter(ap_filter_t *f, apr_bucket_brigade *bb)
     apr_bucket *tmp_b;
     apr_bucket_brigade *tmp_bb = NULL;
     apr_status_t rv;
+    char *random_buffer = NULL;
+    char *header = NULL;
 
     substitute_module_ctx *ctx = f->ctx;
 
@@ -458,7 +483,6 @@ static apr_status_t substitute_filter(ap_filter_t *f, apr_bucket_brigade *bb)
                                             f->r->connection->bucket_alloc);
                             apr_brigade_cleanup(ctx->linebb);
                         }
-
                         rv = do_pattmatch(f, b, ctx->pattbb, ctx->tpool);
                         if (rv != APR_SUCCESS)
                             goto err;
@@ -538,7 +562,7 @@ err:
     return rv;
 }
 
-static int set_pattern_from_notes(ap_filter_t *f)
+static const char *set_pattern(cmd_parms *cmd, void *cfg, const char *line)
 {
     char *from = NULL;
     char *to = NULL;
@@ -551,27 +575,10 @@ static int set_pattern_from_notes(ap_filter_t *f)
     int flatten = 1;
     ap_regex_t *r = NULL;
 
-    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, "before creating dcfg");
-    subst_dir_conf *cfg = (subst_dir_conf *) ap_get_module_config(f->r->per_dir_config,
-                                             &substitute_module);
-
-    char *line = apr_pstrdup(f->r->pool,
-         "s|yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy|zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz|ni");
-
-    const char * nonce_s = apr_table_get(f->r->notes, "nonce-s");	
-
-    if(nonce_s) {
-	ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, "nonce-s present in table %s",
-                      nonce_s);
-    } else {
-	ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, "nonce-s not present in table");
-    }
-
     if (apr_tolower(*line) != 's') {
-        return -1;
+        return "Bad Substitute format, must be an s// pattern";
     }
-
-    ourline = apr_pstrdup(f->r->pool, line);
+    ourline = apr_pstrdup(cmd->pool, line);
     delim = *++ourline;
     if (delim)
         from = ++ourline;
@@ -581,21 +588,14 @@ static int set_pattern_from_notes(ap_filter_t *f)
         }
         if (*ourline) {
             *ourline = '\0';
-            to = ++ourline;
-        }
-    }
-    if (to) {
-        if (*ourline != delim) {
-            while (*++ourline && *ourline != delim);
-        }
-        if (*ourline) {
-            *ourline = '\0';
             flags = ++ourline;
         }
     }
 
-    if (!delim || !from || !*from || !to) {
-        return -1;
+    /* assuming 32 bytes (excluding \0) present in from) */
+
+    if (!delim || !from || !*from) {
+        return "Bad Substitute format, must be a complete s// pattern";
     }
 
     if (flags) {
@@ -610,20 +610,19 @@ static int set_pattern_from_notes(ap_filter_t *f)
             else if (delim == 'q')
                 flatten = 0;
             else
-                return -1;
+                return "Bad Substitute flag, only s//[infq] are supported";
             flags++;
         }
     }
 
     /* first see if we can compile the regex */
     if (!is_pattern) {
-        r = ap_pregcomp(f->r->pool, from, AP_REG_EXTENDED |
+        r = ap_pregcomp(cmd->pool, from, AP_REG_EXTENDED |
                         (ignore_case ? AP_REG_ICASE : 0));
         if (!r)
-            return -1;
+            return "Substitute could not compile regex";
     }
-
-    nscript = apr_array_push(cfg->patterns);
+    nscript = apr_array_push(((subst_dir_conf *) cfg)->patterns);
     /* init the new entries */
     nscript->pattern = NULL;
     nscript->regexp = NULL;
@@ -632,16 +631,32 @@ static int set_pattern_from_notes(ap_filter_t *f)
 
     if (is_pattern) {
         nscript->patlen = strlen(from);
-        nscript->pattern = apr_strmatch_precompile(f->r->pool, from,
+        nscript->pattern = apr_strmatch_precompile(cmd->pool, from,
                                                    !ignore_case);
     }
     else {
         nscript->regexp = r;
     }
 
-    nscript->replacement = to;
-    nscript->replen = strlen(to);
+    nscript->replacement = ((subst_dir_conf *) cfg)->nonce;
+    nscript->replen = strlen(nscript->replacement);
     nscript->flatten = flatten;
+
+    return NULL;
+}
+
+static int set_header(ap_filter_t *f)
+{
+    subst_dir_conf *cfg =
+    (subst_dir_conf *) ap_get_module_config(f->r->per_dir_config,
+                                             &substitute_module);
+
+    char *header = apr_pstrcat(f->r->pool, "script-nonce ", 
+                         ((subst_dir_conf *) cfg)->nonce,"; ", NULL);
+
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, APLOGNO(01328) "header %s",
+                      header);
+    apr_table_add(f->r->headers_out, "Content-Security-Policy", header);
 
     return OK;
 }
@@ -650,28 +665,21 @@ static int set_pattern_from_notes(ap_filter_t *f)
 static void register_hooks(apr_pool_t *pool)
 {
     ap_register_output_filter(substitute_filter_name, substitute_filter,
-                              set_pattern_from_notes, AP_FTYPE_RESOURCE);
+                              set_header, AP_FTYPE_PROTOCOL);
 }
 
-//static const char *dummy(cmd_parms *cmd, void *cfg, const char *line) {
-//    return NULL;
-//}
-
-//static const command_rec substitute_cmds[] = {
-//    AP_INIT_TAKE1("Substitute", dummy, NULL, OR_ALL,
-//                  "Pattern to filter the response content (s/foo/bar/[inf])"),
-//    {NULL}
-//};
+static const command_rec substitute_cmds[] = {
+    AP_INIT_TAKE1("Substitute", set_pattern, NULL, OR_ALL,
+                  "Pattern to filter the response content (s/foo/)"),
+    {NULL}
+};
 
 AP_DECLARE_MODULE(substitute) = {
     STANDARD20_MODULE_STUFF,
     create_substitute_dcfg,     /* dir config creater */
-//    NULL, //for create dcfg
-//    merge_substitute_dcfg,      /* dir merger --- default is to override */
-    NULL, //for dir merger
+    NULL,      /* dir merger --- default is to override */
     NULL,                       /* server config */
     NULL,                       /* merge server config */
-//    substitute_cmds,            /* command table */ 
-    NULL, //for subs cmds
+    substitute_cmds,            /* command table */
     register_hooks              /* register hooks */
 };
