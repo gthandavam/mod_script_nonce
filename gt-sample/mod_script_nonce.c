@@ -15,7 +15,7 @@
  */
 
 /*
- * mod_substitute.c: Perform content rewriting on the fly
+ * mod_script_nonce.c: Perform content rewriting on the fly
  */
 
 #include "httpd.h"
@@ -36,9 +36,9 @@
 /* 32 bytes plus 1 for \0*/
 #define NONCE_BYTES 33
 
-static const char substitute_filter_name[] = "SUBSTITUTE";
+static const char script_nonce_filter_name[] = "ADD-SCRIPT-NONCE";
 
-module AP_MODULE_DECLARE_DATA substitute_module;
+module AP_MODULE_DECLARE_DATA script_nonce_module;
 
 typedef struct subst_pattern_t {
     const apr_strmatch_pattern *pattern;
@@ -52,7 +52,7 @@ typedef struct subst_pattern_t {
 typedef struct {
     apr_array_header_t *patterns;
     char *nonce;
-} subst_dir_conf;
+} script_nonce_dir_confg;
 
 typedef struct {
     apr_bucket_brigade *linebb;
@@ -60,7 +60,7 @@ typedef struct {
     apr_bucket_brigade *passbb;
     apr_bucket_brigade *pattbb;
     apr_pool_t *tpool;
-} substitute_module_ctx;
+} script_nonce_module_ctx;
 
 static void get_random_byte_string(char *buffer, int size)
 {
@@ -77,10 +77,10 @@ static void get_random_byte_string(char *buffer, int size)
     buffer[size-1] = '\0';
 }
 
-static void *create_substitute_dcfg(apr_pool_t *p, char *d)
+static void *create_script_nonce_dcfg(apr_pool_t *p, char *d)
 {
-    subst_dir_conf *dcfg =
-    (subst_dir_conf *) apr_pcalloc(p, sizeof(subst_dir_conf));
+    script_nonce_dir_confg *dcfg =
+    (script_nonce_dir_confg *) apr_pcalloc(p, sizeof(script_nonce_dir_confg));
     dcfg->nonce = (char *) apr_pcalloc(p, NONCE_BYTES);
 
     get_random_byte_string(dcfg->nonce, NONCE_BYTES);
@@ -90,17 +90,17 @@ static void *create_substitute_dcfg(apr_pool_t *p, char *d)
     return dcfg;
 }
 
-static void *merge_substitute_dcfg(apr_pool_t *p, void *basev, void *overv)
-{
-    subst_dir_conf *a =
-    (subst_dir_conf *) apr_pcalloc(p, sizeof(subst_dir_conf));
-    subst_dir_conf *base = (subst_dir_conf *) basev;
-    subst_dir_conf *over = (subst_dir_conf *) overv;
-
-    a->patterns = apr_array_append(p, over->patterns,
-                                                  base->patterns);
-    return a;
-}
+//static void *merge_script_nonce_dcfg(apr_pool_t *p, void *basev, void *overv)
+//{
+//    script_nonce_dir_confg *a =
+//    (script_nonce_dir_confg *) apr_pcalloc(p, sizeof(script_nonce_dir_confg));
+//    script_nonce_dir_confg *base = (script_nonce_dir_confg *) basev;
+//    script_nonce_dir_confg *over = (script_nonce_dir_confg *) overv;
+//
+//    a->patterns = apr_array_append(p, over->patterns,
+//                                                  base->patterns);
+//    return a;
+//}
 
 #define AP_MAX_BUCKETS 1000
 /*
@@ -131,9 +131,9 @@ static apr_status_t do_pattmatch(ap_filter_t *f, apr_bucket *inb,
     apr_bucket *b;
     apr_bucket *tmp_b;
 
-    subst_dir_conf *cfg =
-    (subst_dir_conf *) ap_get_module_config(f->r->per_dir_config,
-                                             &substitute_module);
+    script_nonce_dir_confg *cfg =
+    (script_nonce_dir_confg *) ap_get_module_config(f->r->per_dir_config,
+                                             &script_nonce_module);
     subst_pattern_t *script;
 
     APR_BRIGADE_INSERT_TAIL(mybb, inb);
@@ -320,7 +320,7 @@ static apr_status_t do_pattmatch(ap_filter_t *f, apr_bucket *inb,
     return APR_SUCCESS;
 }
 
-static apr_status_t substitute_filter(ap_filter_t *f, apr_bucket_brigade *bb)
+static apr_status_t script_nonce_filter(ap_filter_t *f, apr_bucket_brigade *bb)
 {
     apr_size_t bytes;
     apr_size_t len;
@@ -335,7 +335,7 @@ static apr_status_t substitute_filter(ap_filter_t *f, apr_bucket_brigade *bb)
     char *random_buffer = NULL;
     char *header = NULL;
 
-    substitute_module_ctx *ctx = f->ctx;
+    script_nonce_module_ctx *ctx = f->ctx;
 
     /*
      * First time around? Create the saved bb that we used for each pass
@@ -622,7 +622,7 @@ static const char *set_pattern(cmd_parms *cmd, void *cfg, const char *line)
         if (!r)
             return "Substitute could not compile regex";
     }
-    nscript = apr_array_push(((subst_dir_conf *) cfg)->patterns);
+    nscript = apr_array_push(((script_nonce_dir_confg *) cfg)->patterns);
     /* init the new entries */
     nscript->pattern = NULL;
     nscript->regexp = NULL;
@@ -638,7 +638,7 @@ static const char *set_pattern(cmd_parms *cmd, void *cfg, const char *line)
         nscript->regexp = r;
     }
 
-    nscript->replacement = ((subst_dir_conf *) cfg)->nonce;
+    nscript->replacement = ((script_nonce_dir_confg *) cfg)->nonce;
     nscript->replen = strlen(nscript->replacement);
     nscript->flatten = flatten;
 
@@ -647,12 +647,12 @@ static const char *set_pattern(cmd_parms *cmd, void *cfg, const char *line)
 
 static int set_header(ap_filter_t *f)
 {
-    subst_dir_conf *cfg =
-    (subst_dir_conf *) ap_get_module_config(f->r->per_dir_config,
-                                             &substitute_module);
+    script_nonce_dir_confg *cfg =
+    (script_nonce_dir_confg *) ap_get_module_config(f->r->per_dir_config,
+                                             &script_nonce_module);
 
     char *header = apr_pstrcat(f->r->pool, "script-nonce ", 
-                         ((subst_dir_conf *) cfg)->nonce,"; ", NULL);
+                         ((script_nonce_dir_confg *) cfg)->nonce,"; ", NULL);
 
     ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, APLOGNO(01328) "header %s",
                       header);
@@ -664,22 +664,22 @@ static int set_header(ap_filter_t *f)
 #define PROTO_FLAGS AP_FILTER_PROTO_CHANGE|AP_FILTER_PROTO_CHANGE_LENGTH
 static void register_hooks(apr_pool_t *pool)
 {
-    ap_register_output_filter(substitute_filter_name, substitute_filter,
+    ap_register_output_filter(script_nonce_filter_name, script_nonce_filter,
                               set_header, AP_FTYPE_PROTOCOL);
 }
 
-static const command_rec substitute_cmds[] = {
-    AP_INIT_TAKE1("Substitute", set_pattern, NULL, OR_ALL,
+static const command_rec script_nonce_cmds[] = {
+    AP_INIT_TAKE1("Addscriptnonce", set_pattern, NULL, OR_ALL,
                   "Pattern to filter the response content (s/foo/)"),
     {NULL}
 };
 
-AP_DECLARE_MODULE(substitute) = {
+AP_DECLARE_MODULE(script_nonce) = {
     STANDARD20_MODULE_STUFF,
-    create_substitute_dcfg,     /* dir config creater */
+    create_script_nonce_dcfg,     /* dir config creater */
     NULL,      /* dir merger --- default is to override */
     NULL,                       /* server config */
     NULL,                       /* merge server config */
-    substitute_cmds,            /* command table */
+    script_nonce_cmds,            /* command table */
     register_hooks              /* register hooks */
 };
