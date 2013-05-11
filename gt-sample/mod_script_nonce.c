@@ -62,19 +62,23 @@ typedef struct {
     apr_pool_t *tpool;
 } script_nonce_module_ctx;
 
-static void get_random_byte_string(char *buffer, int size)
+static void get_random_byte_string(char *buffer, int size, request_rec *r )
 {
     int i;
 //TODO csp nonce should be alphanumeric
 
-//    if( apr_generate_random_bytes(buffer, size) == APR_SUCCESS )
-//        for(i=0; i < (size - 1);i++)
-//            if(0x80 & buffer[i])
-//                buffer[i] = 0xff ^ buffer[i];
+    char alphaNumericCharacters[] = "-_0123456789abcdefghopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-    for(i=0; i< (size - 1);i++)
-	buffer[i] = 'y';
-    buffer[size-1] = '\0';
+    if( apr_generate_random_bytes(buffer, size) == APR_SUCCESS ) {
+        for(i=0; i < size;i++) {
+            buffer[i] = ((unsigned char) (buffer[i])) >> 2;
+            if(r)
+               ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r, APLOGNO(01328) "mother fucking buffer, URI %d",
+                   buffer[i]);
+
+            buffer[i] = alphaNumericCharacters[ (int)(buffer[i]) ];
+        }
+    }
 }
 
 static void *create_script_nonce_dcfg(apr_pool_t *p, char *d)
@@ -83,7 +87,7 @@ static void *create_script_nonce_dcfg(apr_pool_t *p, char *d)
     (script_nonce_dir_confg *) apr_pcalloc(p, sizeof(script_nonce_dir_confg));
     dcfg->nonce = (char *) apr_pcalloc(p, NONCE_BYTES);
 
-    get_random_byte_string(dcfg->nonce, NONCE_BYTES);
+    get_random_byte_string(dcfg->nonce, NONCE_BYTES, NULL);
 
     dcfg->patterns = apr_array_make(p, 10, sizeof(subst_pattern_t));
 
@@ -336,6 +340,12 @@ static apr_status_t script_nonce_filter(ap_filter_t *f, apr_bucket_brigade *bb)
     char *header = NULL;
 
     script_nonce_module_ctx *ctx = f->ctx;
+
+    char *lalit_buf = apr_pcalloc(f->r->pool, NONCE_BYTES);
+    get_random_byte_string( lalit_buf, NONCE_BYTES, f->r );
+    lalit_buf[32] = '\0';
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, APLOGNO(01328) "Line too long, URI %s",
+                      lalit_buf);
 
     /*
      * First time around? Create the saved bb that we used for each pass
@@ -651,7 +661,13 @@ static int set_header(ap_filter_t *f)
     (script_nonce_dir_confg *) ap_get_module_config(f->r->per_dir_config,
                                              &script_nonce_module);
 
-    char *header = apr_pstrcat(f->r->pool, "script-nonce ", 
+    char *lalit_buf = apr_pcalloc(f->r->pool, NONCE_BYTES);
+    get_random_byte_string( lalit_buf, NONCE_BYTES, NULL );
+    lalit_buf[32] = '\0';
+    ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, APLOGNO(01328) "too long, URI %s",
+                      lalit_buf);
+
+    char *header = apr_pstrcat(f->r->pool, "script-nonce ",
                          ((script_nonce_dir_confg *) cfg)->nonce,"; ", NULL);
 
     ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, f->r, APLOGNO(01328) "header %s",
