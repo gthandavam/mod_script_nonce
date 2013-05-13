@@ -84,7 +84,7 @@ static void *create_script_nonce_dcfg(apr_pool_t *p, char *d)
     (script_nonce_dir_confg *) apr_pcalloc(p, sizeof(script_nonce_dir_confg));
     dcfg->nonce = (unsigned char *) apr_pcalloc(p, NONCE_BYTES);
 
-    get_random_byte_string(dcfg->nonce, NONCE_BYTES);
+//    get_random_byte_string(dcfg->nonce, NONCE_BYTES);
 
     dcfg->patterns = apr_array_make(p, 10, sizeof(subst_pattern_t));
 
@@ -652,6 +652,7 @@ static int set_header(ap_filter_t *f)
     (script_nonce_dir_confg *) ap_get_module_config(f->r->per_dir_config,
                                              &script_nonce_module);
 
+    get_random_byte_string(cfg->nonce, NONCE_BYTES);
     char *header = apr_pstrcat(f->r->pool, "script-nonce ",
                          ((script_nonce_dir_confg *) cfg)->nonce,"; ", NULL);
 
@@ -666,7 +667,7 @@ static int set_header(ap_filter_t *f)
 static void register_hooks(apr_pool_t *pool)
 {
     ap_register_output_filter(script_nonce_filter_name, script_nonce_filter,
-                              set_header, AP_FTYPE_PROTOCOL);
+                              set_header, AP_FTYPE_RESOURCE);
 }
 
 static const command_rec script_nonce_cmds[] = {
