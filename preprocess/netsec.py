@@ -14,7 +14,7 @@ except IOError:
     print "ERROR encountered while reading input file!!"
     quit()
 
-    
+
 while s:
     fname=s.strip()
     s=ff.readline()
@@ -25,7 +25,7 @@ while s:
     except IOError:
         print "ERROR encountered while reading input file!!"
         quit()
-    
+
     line = f.readline()
     lineno=0
     while line:
@@ -40,7 +40,7 @@ while s:
             for i in range(len(line)):
                 buff+=line[i]
                 if i == insrt:
-                    buff+=" nonce='xxxxxxxxxxxxxxxxx'"
+                    buff+=" nonce='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
                     if len(indxlist)>0:
                         insrt=indxlist.pop()
             fnew.write(buff)
