@@ -173,3 +173,188 @@ Percentage of the requests served within a certain time (ms)
   98%   7144
   99%  13239
  100%  13243 (longest request)
+\n*****************\n
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.sirsikar.com (be patient)
+
+
+Server Software:        Apache/2.4.4
+Server Hostname:        www.sirsikar.com
+Server Port:            80
+
+Document Path:          /benchmarkSample.html
+Document Length:        10053 bytes
+
+Concurrency Level:      300
+Time taken for tests:   27.969 seconds
+Complete requests:      1000
+Failed requests:        0
+Write errors:           0
+Total transferred:      10352000 bytes
+HTML transferred:       10053000 bytes
+Requests per second:    35.75 [#/sec] (mean)
+Time per request:       8390.803 [ms] (mean)
+Time per request:       27.969 [ms] (mean, across all concurrent requests)
+Transfer rate:          361.44 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    7  10.6      0      27
+Processing:   365 3965 8861.5    734   27935
+Waiting:        1 3455 8966.5    139   27762
+Total:        365 3972 8868.1    734   27958
+
+Percentage of the requests served within a certain time (ms)
+  50%    734
+  66%    774
+  75%    789
+  80%    799
+  90%  27765
+  95%  27926
+  98%  27951
+  99%  27955
+ 100%  27958 (longest request)
+\n*****************\n
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.sirsikar.com (be patient)
+
+
+Server Software:        Apache/2.4.4
+Server Hostname:        www.sirsikar.com
+Server Port:            80
+
+Document Path:          /benchmarkSample.html
+Document Length:        10053 bytes
+
+Concurrency Level:      350
+Time taken for tests:   28.918 seconds
+Complete requests:      1000
+Failed requests:        0
+Write errors:           0
+Total transferred:      10352000 bytes
+HTML transferred:       10053000 bytes
+Requests per second:    34.58 [#/sec] (mean)
+Time per request:       10121.182 [ms] (mean)
+Time per request:       28.918 [ms] (mean, across all concurrent requests)
+Transfer rate:          349.59 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   12  16.5      0      41
+Processing:   508 4458 9365.7    924   28872
+Waiting:        2 3908 9472.5    300   28685
+Total:        508 4470 9373.5    925   28902
+
+Percentage of the requests served within a certain time (ms)
+  50%    925
+  66%    942
+  75%    976
+  80%   1001
+  90%  28724
+  95%  28872
+  98%  28894
+  99%  28899
+ 100%  28902 (longest request)
+\n*****************\n
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.sirsikar.com (be patient)
+
+
+Server Software:        Apache/2.4.4
+Server Hostname:        www.sirsikar.com
+Server Port:            80
+
+Document Path:          /benchmarkSample.html
+Document Length:        10053 bytes
+
+Concurrency Level:      400
+Time taken for tests:   51.819 seconds
+Complete requests:      1000
+Failed requests:        42
+   (Connect: 0, Receive: 0, Length: 42, Exceptions: 0)
+Write errors:           0
+Total transferred:      9917216 bytes
+HTML transferred:       9630774 bytes
+Requests per second:    19.30 [#/sec] (mean)
+Time per request:       20727.560 [ms] (mean)
+Time per request:       51.819 [ms] (mean, across all concurrent requests)
+Transfer rate:          186.90 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   14  17.8      0      45
+Processing:   560 6388 12915.0    930   51771
+Waiting:        0 3728 8976.1    326   27205
+Total:        560 6401 12925.2    931   51803
+
+Percentage of the requests served within a certain time (ms)
+  50%    931
+  66%    964
+  75%   1016
+  80%   1111
+  90%  27323
+  95%  27397
+  98%  51405
+  99%  51591
+ 100%  51803 (longest request)
+\n*****************\n
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.sirsikar.com (be patient)
+
+
+Server Software:        Apache/2.4.4
+Server Hostname:        www.sirsikar.com
+Server Port:            80
+
+Document Path:          /benchmarkSample.html
+Document Length:        10053 bytes
+
+Concurrency Level:      450
+Time taken for tests:   51.820 seconds
+Complete requests:      1000
+Failed requests:        67
+   (Connect: 0, Receive: 0, Length: 67, Exceptions: 0)
+Write errors:           0
+Total transferred:      9658416 bytes
+HTML transferred:       9379449 bytes
+Requests per second:    19.30 [#/sec] (mean)
+Time per request:       23319.180 [ms] (mean)
+Time per request:       51.820 [ms] (mean, across all concurrent requests)
+Transfer rate:          182.01 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0   41 151.4      0    1000
+Processing:   323 7294 14178.0    984   51771
+Waiting:        0 3335 7964.6    340   24200
+Total:        359 7335 14178.3    993   51812
+
+Percentage of the requests served within a certain time (ms)
+  50%    993
+  66%   1131
+  75%   1273
+  80%   2150
+  90%  24348
+  95%  51411
+  98%  51607
+  99%  51611
+ 100%  51812 (longest request)
+\n*****************\n
+This is ApacheBench, Version 2.3 <$Revision: 655654 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking www.sirsikar.com (be patient)
+Total of 908 requests completed
