@@ -32,3 +32,7 @@ and set the notes nonce-s, with value of the form s|pattern|nonce|ni
 This nonce-s will be used by the tweaked mod_substitute to substitute all the
 occurrences of the pattern in the response.
 
+Lalit pointed out that we could simply hack mod_substitute to our own needs and avoid using request->notes. And so we did.
+
+Implemented Approach:
+Hacked mod_substitute to replace the given string (mentioned in httpd.conf) with a nonce, that is generated per request.
