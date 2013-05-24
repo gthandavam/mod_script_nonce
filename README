@@ -1,4 +1,4 @@
-#####How to use mod_script_nonce module
+How to use mod_script_nonce module
 
 Add the following in  conf/httpd.conf 
 	LoadModule script_nonce_module modules/mod_script_nonce.so
