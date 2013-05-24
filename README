@@ -1,3 +1,20 @@
+#####How to use mod_script_nonce module
+
+Add the following in  conf/httpd.conf 
+	LoadModule script_nonce_module modules/mod_script_nonce.so
+
+	<Location />¬                                                                    
+    	 AddOutputFilterByType ADD-SCRIPT-NONCE text/html                            
+         Addscriptnonce s/server-secret/                          
+	</Location>
+
+
+How to compile and install the module:
+
+	apxs -iac <path to mod_script_nonce.c>  -I <path to apr-util and apr source files>
+
+
+
 Lalit, Ameya and GT
 
 Instructions:
